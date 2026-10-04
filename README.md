@@ -302,29 +302,7 @@ ProjectSettings/                       # Unity 版本、输入、图层、构建
 | `Checkpoint` / `LevelEnd` / `TriggerZone` | 关卡触发行为 |
 | `DebugConfigPanel` | IMGUI 运行时调参和状态显示 |
 
-## 提交 GitHub 前
 
-应提交 `Assets/`（包含 `.meta`）、`Packages/`、`ProjectSettings/`、本 README 及团队的 `.gitignore`。保留 `.meta`，否则资源 GUID 变化可能导致场景与资源引用丢失。
-
-根目录已生成 [.gitignore](.gitignore)，排除以下 Unity 缓存、IDE 文件和构建产物：
-
-```gitignore
-/[Ll]ibrary/
-/[Tt]emp/
-/[Oo]bj/
-/[Ll]ogs/
-/[Uu]ser[Ss]ettings/
-/[Bb]uild/
-/[Bb]uilds/
-/.vs/
-*.csproj
-*.sln
-*.slnx
-*.user
-
-```
-
-项目名称、公司名称和 Application Identifier 当前仍使用模板值，正式发布前需按项目修改。资源授权按实际来源保留，第三方字体等随包许可文件也应保留。
 
 ### 版本维护
 
