@@ -1,0 +1,43 @@
+# Unity-generated caches and machine-specific settings
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# Local build output
+/[Bb]uild/
+/[Bb]uilds/
+/*_BurstDebugInformation_DoNotShip/
+
+# IDE caches and generated Unity solution/project files
+/.vs/
+/.idea/
+/.gradle/
+/ExportedObj/
+/*.csproj
+/*.unityproj
+/*.sln
+/*.slnx
+/*.suo
+/*.user
+/*.userprefs
+/*.pidb
+/*.opendb
+/*.VC.db
+
+# Logs, crash reports and operating-system metadata
+*.log
+/sysinfo.txt
+/*.stacktrace
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Keep Assets (including .meta), Packages, ProjectSettings and README tracked.
+# Do not ignore all .dll/.exe files: plugins can require them under Assets.
+
+# Local pre-migration rollback backup
+/MigrationBackup~/
