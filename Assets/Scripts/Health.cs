@@ -27,7 +27,9 @@ public class Health : MonoBehaviour
 
     public bool TryTakeDamage(int amount, float invincibleTime, Vector2 knockback)
     {
-        if (IsDead || IsInvincible) return false;
+        if (IsDead || IsInvincible || amount <= 0) return false;
+        var equipment = GetComponent<PlayerEquipment>();
+        if (equipment != null) amount = Mathf.Max(1, amount - equipment.DamageReduction);
 
         CurrentHP = Mathf.Max(0, CurrentHP - amount);
         OnHPChanged?.Invoke(CurrentHP, maxHP);

@@ -6,11 +6,13 @@ public class PlayerInputReader : MonoBehaviour
     private PlayerControls controls;
 
     public float MoveInput { get; private set; }
-    public bool JumpHeld { get; private set; }   // ← 新增
+    public bool JumpHeld { get; private set; }
+    public float MoveVertical { get; private set; }
 
     private bool jumpPressed;
     private bool attackPressed;
     private bool pausePressed;
+    private bool equipmentPressed;
 
     void Awake()
     {
@@ -24,6 +26,7 @@ public class PlayerInputReader : MonoBehaviour
         controls.Player.Jump.performed += OnJump;
         controls.Player.Attack.performed += OnAttack;
         controls.Player.Pause.performed += OnPause;
+        controls.Player.Equipment.performed += OnEquipment;
     }
 
     void OnDisable()
@@ -31,6 +34,8 @@ public class PlayerInputReader : MonoBehaviour
         controls.Player.Jump.performed -= OnJump;
         controls.Player.Attack.performed -= OnAttack;
         controls.Player.Pause.performed -= OnPause;
+        controls.Player.Equipment.performed -= OnEquipment;
+        equipmentPressed = false;
 
         controls.Player.Disable();
     }
@@ -39,6 +44,7 @@ public class PlayerInputReader : MonoBehaviour
     {
         Vector2 move = controls.Player.Move.ReadValue<Vector2>();
         MoveInput = move.x;
+        MoveVertical = move.y;
         JumpHeld = controls.Player.Jump.IsPressed();
     }
 
@@ -58,6 +64,12 @@ public class PlayerInputReader : MonoBehaviour
         pausePressed = true;
     }
 
+    void OnEquipment(InputAction.CallbackContext ctx)
+    {
+        equipmentPressed = true;
+    }
+
+    public bool ConsumeEquipment() { bool v = equipmentPressed; equipmentPressed = false; return v; }
     public bool ConsumeJump() { bool v = jumpPressed; jumpPressed = false; return v; }
     public bool ConsumeAttack() { bool v = attackPressed; attackPressed = false; return v; }
     public bool ConsumePause() { bool v = pausePressed; pausePressed = false; return v; }

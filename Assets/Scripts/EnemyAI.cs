@@ -16,7 +16,7 @@ public class EnemyAI : MonoBehaviour
     public GameObject hitboxPrefab;
     public Animator animator;
 
-    public enum EnemyState { Patrol, Attack, Hurt, Dead }
+    public enum EnemyState { Patrol = 0, Attack = 1, Hurt = 2, Dead = 3, Alert = 4 }
 
     private Rigidbody2D rb;
     private Health health;
@@ -29,6 +29,7 @@ public class EnemyAI : MonoBehaviour
     private float attackStateTimer;
     private float hurtTimer;
     private bool hitboxOpened;
+    private float lostTargetTimer;
 
     public EnemyState CurrentState => state;
 
@@ -73,6 +74,7 @@ public class EnemyAI : MonoBehaviour
         switch (state)
         {
             case EnemyState.Patrol: UpdatePatrol(); break;
+            case EnemyState.Alert: UpdateAlert(); break;
             case EnemyState.Attack: UpdateAttack(); break;
             case EnemyState.Hurt: UpdateHurt(); break;
         }
@@ -87,6 +89,7 @@ public class EnemyAI : MonoBehaviour
         switch (state)
         {
             case EnemyState.Patrol: FixedPatrol(); break;
+            case EnemyState.Alert: FixedAlert(); break;
             case EnemyState.Attack: FixedIdle(); break;
             case EnemyState.Hurt: FixedIdle(); break;
         }
@@ -97,7 +100,7 @@ public class EnemyAI : MonoBehaviour
     // ============================================================
     bool CanSeePlayer()
     {
-        if (player == null) return false;
+        if (!HasLivingTarget()) return false;
 
         Vector2 toPlayer = (Vector2)player.position - (Vector2)transform.position;
 
@@ -116,7 +119,7 @@ public class EnemyAI : MonoBehaviour
 
     bool InAttackRange()
     {
-        if (player == null) return false;
+        if (!HasLivingTarget()) return false;
 
         Vector2 toPlayer = (Vector2)player.position - (Vector2)transform.position;
         if (data.ignoreY)
@@ -130,30 +133,116 @@ public class EnemyAI : MonoBehaviour
     // ============================================================
     void UpdatePatrol()
     {
-        if (player == null) return;
-
-        if (CanSeePlayer())
-        {
-            int dir = player.position.x > transform.position.x ? 1 : -1;
-            if (dir != facing)
-            {
-                facing = dir;
-                transform.localScale = new Vector3(facing, 1, 1);
-            }
-
-            if (InAttackRange() && attackCooldownTimer <= 0)
-                EnterAttack();
-        }
+        if (CanSeePlayer()) EnterAlert();
     }
 
     void FixedPatrol()
     {
         float offset = transform.position.x - patrolStartX;
-
-        if (Mathf.Abs(offset) >= data.patrolDistance || WallAhead() || CliffAhead())
+        // 仅当向巡逻边界外移动时翻转，避免越界后一帧翻一次。
+        if (offset * facing >= data.patrolDistance || WallAhead() || CliffAhead())
             Flip();
-
         rb.velocity = new Vector2(facing * data.moveSpeed, rb.velocity.y);
+    }
+
+    // ============================================================
+    // Alert：冷却时保持距离；准备好后接近到攻击范围。
+    // ============================================================
+    bool HasLivingTarget()
+    {
+        if (player == null || !player.gameObject.activeInHierarchy) return false;
+        var targetHealth = player.GetComponent<Health>();
+        return targetHealth == null || !targetHealth.IsDead;
+    }
+
+    bool CanTrackTarget()
+    {
+        if (!HasLivingTarget()) return false;
+        Vector2 delta = player.position - transform.position;
+        if (data.ignoreY) delta.y = 0;
+        return delta.magnitude <= Mathf.Max(data.detectRange, data.loseTargetRange);
+    }
+
+    void FacePlayer()
+    {
+        if (player == null) return;
+        float dx = player.position.x - transform.position.x;
+        if (Mathf.Abs(dx) < 0.01f) return;
+        facing = dx > 0 ? 1 : -1;
+        transform.localScale = new Vector3(facing, 1, 1);
+    }
+
+    void EnterAlert()
+    {
+        state = EnemyState.Alert;
+        lostTargetTimer = 0;
+        FacePlayer();
+        FixedIdle();
+    }
+
+    void ReturnToPatrol()
+    {
+        state = EnemyState.Patrol;
+        // 从脱战位置开始新的巡逻区间。
+        patrolStartX = transform.position.x;
+        lostTargetTimer = 0;
+        FixedIdle();
+    }
+
+    void UpdateAlert()
+    {
+        if (!HasLivingTarget()) { ReturnToPatrol(); return; }
+        if (!CanTrackTarget())
+        {
+            lostTargetTimer += Time.deltaTime;
+            if (lostTargetTimer >= Mathf.Max(0, data.loseTargetDelay)) ReturnToPatrol();
+            return;
+        }
+        lostTargetTimer = 0;
+        FacePlayer();
+        if (attackCooldownTimer <= 0 && InAttackRange()) EnterAttack();
+    }
+
+    void FixedAlert()
+    {
+        if (!CanTrackTarget()) { FixedIdle(); return; }
+        FacePlayer();
+        float distance = Mathf.Abs(player.position.x - transform.position.x);
+        int moveDirection = 0;
+        if (attackCooldownTimer <= 0)
+        {
+            // 进入有效攻击距离前仍保持警戒；留一点余量避免边界抖动。
+            if (!InAttackRange() && distance > 0.01f) moveDirection = facing;
+        }
+        else
+        {
+            float desired = Mathf.Max(0, data.alertDistance);
+            float tolerance = Mathf.Max(0, data.alertDistanceTolerance);
+            if (distance > desired + tolerance) moveDirection = facing;
+            else if (distance < desired - tolerance) moveDirection = -facing;
+        }
+        if (moveDirection != 0 && MovementBlocked(moveDirection)) moveDirection = 0;
+        rb.velocity = new Vector2(moveDirection * Mathf.Max(0, data.alertMoveSpeed), rb.velocity.y);
+    }
+
+    bool MovementBlocked(int direction)
+    {
+        // 面向玩家后退时，探针应在移动侧，不能继续检测玩家所在侧。
+        if (wallCheck != null)
+        {
+            Vector3 wallPoint = wallCheck.position;
+            wallPoint.x = transform.position.x + Mathf.Abs(wallPoint.x - transform.position.x) * direction;
+            if (Physics2D.OverlapCircle(wallPoint, 0.1f, wallLayer)) return true;
+        }
+        if (groundCheck != null)
+        {
+            Vector3 groundPoint = groundCheck.position;
+            var body = GetComponent<Collider2D>();
+            float step = body != null ? body.bounds.extents.x + 0.05f : 0.5f;
+            groundPoint.x = transform.position.x + Mathf.Max(step, Mathf.Abs(groundPoint.x - transform.position.x)) * direction;
+            if (!Physics2D.OverlapCircle(groundPoint, 0.1f, groundLayer)) return true;
+        }
+        return false;
     }
 
     // ============================================================
@@ -187,8 +276,9 @@ public class EnemyAI : MonoBehaviour
 
         if (attackStateTimer <= 0)
         {
-            state = EnemyState.Patrol;
             attackCooldownTimer = data.attackCooldown;
+            if (CanTrackTarget()) EnterAlert();
+            else ReturnToPatrol();
         }
     }
 
@@ -244,7 +334,10 @@ public class EnemyAI : MonoBehaviour
         rb.velocity = new Vector2(0, rb.velocity.y);
 
         if (hurtTimer <= 0)
-            state = EnemyState.Patrol;
+        {
+            if (CanTrackTarget()) EnterAlert();
+            else ReturnToPatrol();
+        }
     }
 
     // ============================================================
@@ -276,8 +369,8 @@ public class EnemyAI : MonoBehaviour
         rb.velocity = new Vector2(0, rb.velocity.y);
     }
 
-    bool WallAhead() => Physics2D.OverlapCircle(wallCheck.position, 0.1f, wallLayer);
-    bool CliffAhead() => !Physics2D.OverlapCircle(groundCheck.position, 0.1f, groundLayer);
+    bool WallAhead() => wallCheck != null && Physics2D.OverlapCircle(wallCheck.position, 0.1f, wallLayer);
+    bool CliffAhead() => groundCheck != null && !Physics2D.OverlapCircle(groundCheck.position, 0.1f, groundLayer);
 
     void Flip()
     {
@@ -292,7 +385,12 @@ public class EnemyAI : MonoBehaviour
         animator.SetFloat("Speed", Mathf.Abs(rb.velocity.x));
     }
 
-    public void AE_EnemyOpenHitbox() => OpenHitbox();
+    public void AE_EnemyOpenHitbox()
+    {
+        if (state != EnemyState.Attack || hitboxOpened) return;
+        hitboxOpened = true;
+        OpenHitbox();
+    }
 
     // ============================================================
     // Gizmos 调试

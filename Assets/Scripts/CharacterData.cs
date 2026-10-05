@@ -23,4 +23,8 @@ public class CharacterData : ScriptableObject
 
     [Header("Combo")]
     public AttackStep[] combo;
+
+    [Header("Ladder")]
+    public float climbSpeed = 4f;
+    public float climbHorizontalSpeed = 2f;   // 梯子上左右移动速度，0 = 不能左右
 }
