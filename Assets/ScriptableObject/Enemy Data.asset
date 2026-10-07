@@ -29,4 +29,5 @@ MonoBehaviour:
   attackRecovery: 0.3
   attackDamage: 1
   knockback: 3
+  hitStopTime: 0.03
   hurtDuration: 0.2

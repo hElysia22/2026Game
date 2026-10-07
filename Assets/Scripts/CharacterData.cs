@@ -18,7 +18,10 @@ public class CharacterData : ScriptableObject
     [Header("Combat")]
     public int maxHP = 100;
     public float invincibleTime = 0.8f;
+    [Min(0), Tooltip("有效命中的顿帧秒数，0 关闭。")]
     public float hitStopTime = 0.08f;
+    [Min(0), Tooltip("受击状态持续时间；实际取该值与受击动画长度的较大者，保证倒下+起身播完。")]
+    public float hurtDuration = 0.5f;
     public Vector2 hurtKnockback = new Vector2(5f, 5f);
 
     [Header("Combo")]

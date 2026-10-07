@@ -7,6 +7,10 @@ public class PlayerAttackCombo : MonoBehaviour
     public LayerMask enemyLayer;
     [Tooltip("未接入 Animator 时，攻击期间自动开启攻击框；有 Animator 时由动画事件控制。")]
     public bool timedHitboxWithoutAnimator = true;
+    [Tooltip("攻击动画剪辑名；用于按 duration 自动匹配播放速度，让动画随攻击状态一起结束。")]
+    public string attackClipName = "Char_Attack";
+    [Tooltip("Animator 中控制攻击动画速度的 float 参数名。")]
+    public string attackSpeedParameter = "AttackSpeed";
 
     private int comboIndex;
     private float timer;
@@ -59,9 +63,33 @@ public class PlayerAttackCombo : MonoBehaviour
         queued = false;
         inWindow = false;
         var step = player.data.combo[comboIndex];
-        if (step.sfx != null) AudioSource.PlayClipAtPoint(step.sfx, transform.position);
+        var equipment = player.GetComponent<PlayerEquipment>();
+        if (GameAudio.Instance != null)
+            GameAudio.Instance.PlayPlayerAttack(equipment != null && equipment.IsEnhanced(EquipmentSlot.Weapon), step.sfx);
+        else if (step.sfx != null) AudioSource.PlayClipAtPoint(step.sfx, transform.position);
         // Animator 参数由 PlayerController.UpdateAnimator 设置，
         // 若要区分 Attack1/2/3，可以在这里 animator.SetInteger("AttackIndex", comboIndex)
+        SyncAttackAnimationSpeed(step);
+    }
+
+    /// <summary>
+    /// 让攻击动画在配置的 duration 内正好播完：动画随攻击状态一起开始、一起结束。
+    /// 以后改 CharacterData 的 duration 不需要再手改动画长度。
+    /// </summary>
+    void SyncAttackAnimationSpeed(AttackStep step)
+    {
+        if (player == null || player.animator == null || step == null || step.duration <= 0f) return;
+        var controller = player.animator.runtimeAnimatorController;
+        if (controller == null || string.IsNullOrEmpty(attackSpeedParameter)) return;
+
+        float clipLength = 0f;
+        foreach (var clip in controller.animationClips)
+        {
+            if (clip != null && clip.name == attackClipName) { clipLength = clip.length; break; }
+        }
+        if (clipLength <= 0f) return;
+
+        player.animator.SetFloat(attackSpeedParameter, clipLength / step.duration);
     }
 
     // 动画事件调用
@@ -86,7 +114,9 @@ public class PlayerAttackCombo : MonoBehaviour
         hb.knockback = step.knockback;
         hb.invincibleTime = 0.5f;
         hb.targetLayer = enemyLayer;
-        hb.hitSfx = step.sfx;
+        // 挥动和命中是两个事件，命中不能重复播放 AttackStep 的挥动音效。
+        hb.hitSfx = GameAudio.Instance != null ? GameAudio.Instance.hit : null;
+        hb.hitStopTime = Mathf.Max(0, player.data.hitStopTime);
         hb.hitVfx = step.vfxPrefab;
         hb.owner = player.gameObject;
 

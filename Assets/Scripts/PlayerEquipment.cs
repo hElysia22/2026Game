@@ -10,7 +10,7 @@ public class PlayerEquipment : MonoBehaviour
     public const int MaxSpirits = 2;
     public EquipmentData data;
     [SerializeField, Range(0, MaxSpirits), Tooltip("进入游戏时拥有的灵数量；运行中用组件右键菜单测试获取和装卸。")]
-    private int startingSpirits;
+    private int startingSpirits = MaxSpirits;
 
     private int totalSpirits;
     private bool weaponEnhanced;
@@ -28,7 +28,12 @@ public class PlayerEquipment : MonoBehaviour
     public int DamageReduction => IsEnhanced(EquipmentSlot.Clothes) ? Mathf.Max(0, data != null ? data.armorDamageReduction : 1) : 0;
     public event Action OnEquipmentChanged;
 
-    void Awake() => totalSpirits = Mathf.Clamp(startingSpirits, 0, MaxSpirits);
+    void Awake()
+    {
+        totalSpirits = Mathf.Clamp(startingSpirits, 0, MaxSpirits);
+        // HUD 可能先订阅再执行装备 Awake，初始化完成后也需要刷新。
+        OnEquipmentChanged?.Invoke();
+    }
 
     /// <returns>实际增加的数量；达到两个灵上限后返回 0。</returns>
     public int CollectSpirits(int amount = 1)

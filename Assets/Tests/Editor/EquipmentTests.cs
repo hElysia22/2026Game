@@ -25,6 +25,9 @@ public class EquipmentTests
         actor.SetActive(false);
         actor.transform.position = new Vector3(1000, 1000, 0);
         equipment = actor.AddComponent<PlayerEquipment>();
+        // 获取和容量测试明确从空库存开始，不依赖角色的默认开局配置。
+        typeof(PlayerEquipment).GetField("startingSpirits", Private).SetValue(equipment, 0);
+        Call(equipment, "Awake");
         config = ScriptableObject.CreateInstance<EquipmentData>();
         equipment.data = config;
         player = actor.AddComponent<PlayerController>();

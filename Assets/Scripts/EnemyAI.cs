@@ -37,7 +37,7 @@ public class EnemyAI : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         health = GetComponent<Health>();
-        health.maxHP = data.maxHP;
+        health.ResetHealth(data.maxHP);
         patrolStartX = transform.position.x;
 
         attackCooldownTimer = data.attackCooldown;
@@ -285,6 +285,7 @@ public class EnemyAI : MonoBehaviour
     void OpenHitbox()
     {
         if (attackOrigin == null) return;
+        GameAudio.Instance?.PlayEnemyAttack();
 
         GameObject go;
 
@@ -313,6 +314,7 @@ public class EnemyAI : MonoBehaviour
             hb.damage = data.attackDamage;
             hb.knockback = data.knockback;
             hb.invincibleTime = 0.5f;
+            hb.hitStopTime = Mathf.Max(0, data.hitStopTime);
             hb.targetLayer = playerLayer;
             hb.owner = gameObject;
         }

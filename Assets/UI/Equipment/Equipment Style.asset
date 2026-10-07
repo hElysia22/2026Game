@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff44c8bf21d7bbf43a2529b35fce3dae, type: 3}
+  m_Name: Equipment Style
+  m_EditorClassIdentifier: 
+  font: {fileID: 11400000, guid: fd62345eba2dc7e459eacb6540e8f3d0, type: 2}
+  bag: {fileID: 21300000, guid: fc1679fadb53b3a478d1dea29060746e, type: 3}
+  spiritOwned: {fileID: 21300000, guid: 0ca277ce0af300f45bebd47f9af7b5d9, type: 3}
+  spiritMissing: {fileID: 21300000, guid: 9f6a0d0e17f03a54795d630a00fff567, type: 3}
+  healthFull: {fileID: 21300000, guid: d2b0fa30a9583cb439d15d369f78b3f6, type: 3}
+  healthDamaged: {fileID: 21300000, guid: a5ee24aacb809494c926af1ee5fc5a03, type: 3}
+  healthOrnament: {fileID: 21300000, guid: fb77e4d484087cc46aa0cd06f455d179, type: 3}
+  healthPerEye: 1
+  textColor: {r: 1, g: 0.967, b: 0.82, a: 1}
+  mutedColor: {r: 0.69, g: 0.73, b: 0.64, a: 1}
+  accentColor: {r: 0.85, g: 0.67, b: 0.36, a: 1}
+  slotColor: {r: 0.12, g: 0.23, b: 0.2, a: 1}
+  selectedColor: {r: 0.26, g: 0.36, b: 0.27, a: 1}
+  entries:
+  - slot: 0
+    baseName: "\u5315\u9996"
+    enhancedName: "\u957F\u5251"
+    description: "\u968F\u8EAB\u7684\u77ED\u5203\uFF0C\u9002\u5408\u8FD1\u8DDD\u79BB\u51FA\u624B\u3002\u7075\u80FD\u8BA9\u5200\u950B\u5EF6\u4F38\uFF0C\u4E5F\u8BA9\u6BCF\u6B21\u653B\u51FB\u66F4\u6709\u529B\u91CF\u3002"
+    baseIcon: {fileID: 21300000, guid: 8946d20a8c2cfab4186a4b839c60cf74, type: 3}
+    enhancedIcon: {fileID: 21300000, guid: adc81f8b8a3204747a0fb72360cc54e9, type: 3}
+  - slot: 1
+    baseName: "\u56F4\u5DFE"
+    enhancedName: "\u6597\u7BF7"
+    description: "\u4E00\u8DEF\u76F8\u4F34\u7684\u56F4\u5DFE\u3002\u6CE8\u5165\u7075\u540E\u5316\u4E3A\u6597\u7BF7\uFF0C\u501F\u98CE\u5728\u7A7A\u4E2D\u518D\u8DC3\u4E00\u6B65\u3002"
+    baseIcon: {fileID: 21300000, guid: fc1679fadb53b3a478d1dea29060746e, type: 3}
+    enhancedIcon: {fileID: 21300000, guid: 32e63a060d65f2048b53f27c8a5b5f4b, type: 3}
+  - slot: 2
+    baseName: "\u8863\u670D"
+    enhancedName: "\u62A4\u7532"
+    description: "\u8F7B\u4FBF\u7684\u8863\u7269\u3002\u7075\u4E3A\u5B83\u8D4B\u4E88\u4FDD\u62A4\uFF0C\u8BA9\u65C5\u9014\u4E2D\u53D7\u5230\u7684\u4F24\u5BB3\u51CF\u8F7B\u3002"
+    baseIcon: {fileID: 21300000, guid: 573c4c9a6ccccc34d9daa2da10f195b4, type: 3}
+    enhancedIcon: {fileID: 21300000, guid: 3c4264e5651f7974aa76d3fe65187d0a, type: 3}

@@ -60,7 +60,7 @@
 | 玩家状态机 | `Idle / Run / Jump / Fall / Attack / Hurt / Dead` | 已接入；Animator 未赋值 |
 | 攻击与连击 | 按配置数组执行攻击段，连击窗口内再次输入可进入下一段；提供动画事件开关攻击框 | 框架已接入，当前仅配置 1 段，缺少玩家攻击动画事件 |
 | 命中与生命值 | 矩形范围检测、伤害、无敌计时、击退、血量与死亡事件、命中特效 / 音效接口 | 已接入；玩家另有一个常驻测试攻击框 |
-| 命中停顿 | 命中时通过 `HitStop` 暂停并恢复时间缩放 | 已接入，命中调用固定 `0.05s` |
+| 命中停顿 | 有效命中时通过 `HitStop` 暂停并恢复时间缩放 | 默认 `0.03s`，玩家 / 敌人的 `hitStopTime` 均已接入；挥空、无敌目标不触发 |
 | 敌人 AI | 巡逻、边界 / 地面 / 墙检测、前方扇形感知、攻击前摇 / 后摇 / 冷却、受伤、死亡后销毁 | 已接入 `Enemy`；当前 `Wall Layer` 为空，无独立追击状态 |
 | 相机 | Cinemachine 跟随、位置阻尼、死区与画面构图 | 已跟随 `Player`，当前主相机保存为透视投影 |
 | 地形 | Grid、Tilemap、TilemapCollider2D 与 Tile Palette | 已有测试地形与方块素材 |
@@ -119,7 +119,7 @@
 | `Player > Health > Max HP` | 两个 Health 组件均为 `3` | 仅 Inspector | 当前实际 HP 的初始化来源；运行前修改，先处理重复组件 |
 | `CharacterData.maxHP` | `100` | 仅 Inspector | **未接入玩家 Health**，改这里不会自动改变玩家实际血量 |
 | `CharacterData.invincibleTime` | `0.8` | Combat：`0–2` | **未接入命中流程**；动态攻击框目前固定 `0.5s`，常驻测试框为 `0.8s` |
-| `CharacterData.hitStopTime` | `0.08` | Combat：`0–0.3` | **未接入命中流程**；`Hitbox` 命中停顿固定调用 `0.05s` |
+| `CharacterData.hitStopTime` | `0.03` | Combat：`0–0.3` | 玩家有效命中的顿帧秒数；`0` 关闭。敌人同名参数在 `Enemy Data.asset` 中调整 |
 | `CharacterData.hurtKnockback` | `(5, 5)` | 仅 Inspector | **未接入**；实际击退由攻击者的 `Hitbox.knockback` 决定 |
 | 玩家受伤状态时长 | `0.2s` | 无 | 固定在 `PlayerController` 代码中 |
 
@@ -139,7 +139,7 @@
 | `hitboxOffset` | `(1, 0)` | X：`-2–3`；Y：`-1–2` | 相对 `Hitbox Origin` 的局部偏移，由玩家父节点统一翻转；正 X 向面朝方向偏移，负 X 向反方向偏移 |
 | `hitboxSize` | `(1, 1)` | X / Y：`0.2–3` | 动态攻击框的检测宽高 |
 | `knockback` | `0` | `0–15` | 水平击退量，纵向击退为该值的 `0.5` 倍 |
-| `sfx` | 未赋值 | 仅 Inspector | 当前同时用于攻击开始和命中时的音效 |
+| `sfx` | 未赋值 | 仅 Inspector | 挥动音效备用配置；当前场景由 `GameAudio` 按匕首 / 长剑选择音效，命中使用独立的 hit |
 | `vfxPrefab` | 未赋值 | 仅 Inspector | 成功命中时生成的特效 Prefab |
 
 配置有效连击窗口时，应保证 `0 ≤ comboWindowStart ≤ comboWindowEnd ≤ duration`，并留出可操作的时间区间。当前窗口为 `[0, 0]`；增加数组元素后还需要设置各段窗口。窗口外的攻击输入不会缓存到下一段。
@@ -190,15 +190,18 @@ Gizmos 使用 `Hitbox Origin.TransformPoint()` 将同一局部偏移转换到世
 | `Enemy > Ground Layer / Wall Layer` | Ground / Nothing | 墙层当前为空，需按地形图层配置后才能检测墙 |
 | `Enemy > Player Layer` | Player | 敌人攻击框的目标层 |
 | `Enemy > Attack Origin` | `attackOrigin`，局部位置 `(0.48, 0, 0)` | 敌人攻击框生成位置 |
-| `CinemachineCamera > Tracking Target` | Player | 相机跟随目标 |
-| `CinemachineCamera > Lens > Field Of View` | `60°` | 当前透视投影的视野角度 |
-| `Cinemachine Position Composer > Camera Distance` | `10` | 跟随时相机与目标的距离 |
+| `CinemachineCamera > Tracking Target` | Player | 相机跟随目标；选择已引用 Player 的那台 |
+| `CinemachineCamera > Priority` | 启用，`10` | 玩家跟随相机优先于场景中另外两台 Priority `0` 的相机 |
+| `CinemachineCamera > Lens > Field Of View` | `53.13°` | 当前透视投影的视野角度 |
+| `Cinemachine Position Composer > Camera Distance` | `12.61` | 跟随时相机与目标的距离 |
 | `Cinemachine Position Composer > Damping` | `(0.3, 0.42, 0)` | 水平 / 垂直跟随阻尼 |
-| `Composition > Screen Position` | 约 `(0.1185, -0.0689)` | 目标在画面中的构图偏移 |
-| `Composition > Dead Zone` | 启用，Size `(0.1, 0.2)` | 目标在画面内小幅移动时相机保持不动的区域 |
+| `Composition > Screen Position` | `(0.08, 0.29)` | 目标在画面中的构图偏移 |
+| `Composition > Dead Zone` | 启用，Size `(0.1, 0)` | 目标在画面内小幅移动时相机保持不动的区域 |
 | `Lookahead` | 关闭 | 可在 Inspector 配置运动预判 |
 
 当前 `Main Camera` 的 Projection 为 Perspective，Cinemachine Lens 沿用主相机模式。资源中虽有 `Orthographic Size = 5`，只有使用正交投影时才影响视野。调试面板的 Camera 区没有相机滑块。
+
+场景有三台 CinemachineCamera，其中两台未设置跟随目标。玩家跟随相机使用 Priority `10`，其余保持 `0`，避免无目标相机抢占主相机输出。已通过真实左右移动验证 Main Camera 跟随。
 
 当前主要 Layer 为 `Player(3)`、`Enemy(6)`、`Ground(7)`、`OneWay(8)`、`Hitbox(9)`、`Hurtbox(10)`。玩家还使用内置 `Player` Tag，敌人查找玩家与关卡触发都依赖这个 Tag。`OneWay` 等图层名称本身不会实现对应机制。
 
@@ -221,7 +224,7 @@ Gizmos 使用 `Hitbox Origin.TransformPoint()` 将同一局部偏移转换到世
 
 1. **生命值组件与初始化**：Player、Enemy 各挂载了两个 Health，逻辑通过 `GetComponent<Health>()` 获取组件，需整理为唯一实例。玩家配置中的 `maxHP=100` 尚未同步到实际 Health；敌人在 `Awake()` 中只更新上限，而 Health 也在 `Awake()` 初始化当前 HP，变更上限时需要统一初始化流程。
 2. **玩家动态攻击接入**：补充 Animator、动画片段与攻击框开关事件，明确常驻测试框的用途。当前 `animName` 没有播放逻辑；多段连击还需补充数组元素与有效窗口。
-3. **战斗数据接线**：`CharacterData.invincibleTime`、`hitStopTime`、`hurtKnockback` 尚未用于实际命中；当前固定的受伤时长、无敌时间、停顿和敌人攻击框存续时间需要统一为可配置数据。
+3. **战斗数据接线**：`CharacterData.invincibleTime`、`hurtKnockback` 尚未用于实际命中；当前固定的受伤时长、无敌时间和敌人攻击框存续时间需要统一为可配置数据。`hitStopTime` 已接入玩家和敌人的命中流程。
 4. **下降重力**：`ApplyAirMovement()` 中对负的 `Physics2D.gravity.y` 再做减法，额外项会向上补偿，不符合“提高下降重力”的设计意图；需修正公式后再确认该参数的手感。
 5. **敌人环境检测**：当前 Wall Layer 为空；地面检测点是否足以提前识别平台边缘需要结合地图实测。感知也没有遮挡判断或独立追击逻辑。
 6. **死亡、复活与菜单**：玩家死亡仅切换状态，未调用 `GameManager.OnPlayerDeath()`；死亡 / 暂停面板未赋值。`Respawn()` 目前只恢复时间与尝试移动位置，未恢复 HP、死亡状态或清理攻击状态；零向量复活点也会被当前条件跳过。
@@ -304,6 +307,59 @@ ProjectSettings/                       # Unity 版本、输入、图层、构建
 
 
 
+## 玩法音效与轻微顿帧（2026-10-06）
+
+玩家开局默认带满 **2 个灵**，初始均未装入装备，按 `I` 打开面板自由分配。可在 `Player > PlayerEquipment > Starting Spirits` 中调整初始数量（`0–2`）。
+
+当前主场景 `GameManage` 上的 `GameAudio` 管理现有音效，采用 2D 播放，不随相机距离衰减。
+
+| 音效 | 触发位置 |
+| --- | --- |
+| `Audio/swing.wav` | 玩家基础匕首每段攻击开始 |
+| `Audio/sword sound.wav` | 武器装入灵强化成长剑后，每段攻击开始；取回灵后恢复匕首音效 |
+| `Audio/enemy.wav` | 怪物完成前摇、实际开启攻击框时 |
+| `Audio/Generated/hit-impact.wav` | 玩家或怪物的攻击造成有效伤害时；挥空、无敌与同一攻击框重复检测不播放 |
+| `Audio/Move.mp3` | 玩家在地面实际移动时循环；停止、贴墙、空中、死亡或面板暂停时停止 |
+
+命中版本从 `hit.flac` 导出，仅移除了约 `0.216s` 的开头静音，并保留短渐入；原文件保留。音效采用独立的效果 / 移动播放源，避免移动音效打断挥动与命中。灵面板或游戏暂停时效果音暂停，命中顿帧时效果音继续播放。
+
+策划可在 `GameManage > GameAudio` 替换五个音效，调整 `Effects Volume`（默认 `0.8`）、`Movement Volume`（默认 `0.35`）及 `Minimum Move Speed`（默认 `0.1`）。顿帧时间分别通过 `Character Data.asset` / `Enemy Data.asset` 的 `hitStopTime` 调整，默认 `0.03s`，设为 `0` 关闭；玩家参数也可通过运行时调试面板的 Combat 区调整。
+
+本次 31 项运行检查通过，覆盖实际音频信号、武器灵装卸后的音效切换、移动停止条件、有效命中和暂停恢复；现有 40 项 EditMode 回归测试全部通过。当前主场景的 `EnemyAI` 组件处于未勾选状态，需要启用后才能体验怪物自动攻击及其音效。
+
+## 连续地面与横向森林背景（2026-10-06）
+
+主场景使用 `ForestGround` 连续地面，范围为世界 X `-30～70`，站立表面 Y `0`。原场景的 Grid / Tilemap 已移除，碰撞由 Ground 层的 `GroundCollider`（BoxCollider2D）承担。草地起伏与植物属于外观，当前站立表面为平面。
+
+`UI/Ground` 已替换为新地面素材：`上层.png` 为透明地表轮廓和植物（6145 × 1748），`中层.png` 为绿色过渡带（1024 × 128），`底层.png` 为深色土层（1024 × 128）。参考完整合成图调整叠层接缝。上层仅通过显示区域排除透明留白，不修改原图，并保留现有草片间距；过渡带与深色底层连续显示。地表排序为 `20`，绘制在角色前面，树层保持在角色后面。地面根物体位置、站立高度、宽度、厚度与碰撞均保留。
+
+在 `ForestGround > GroundStrip` 中可调整：
+
+| 参数 | 作用 / 当前值 |
+| --- | --- |
+| Width / Depth | 地面宽度 `100`、厚度 `4`；同步更新碰撞体 |
+| Surface Y | 站立表面世界高度 `0`；同步更新碰撞体 |
+| Top Height / Top Center Offset | 地表有效区域高度 `2.2`、中心相对地面的偏移约 `0.6889`；增大偏移可继续上移视觉层 |
+| Top Gap | 相邻草片之间的空隙，当前 `10.37` 世界单位；设为 `0` 取消额外间距 |
+| Top Sorting Order | 地表排序 `20`，角色当前为 `0` |
+| Mid Height / Mid Center Offset | 绿色过渡层高度约 `0.4111`、偏移约 `-0.2055`，顶部与站立表面对齐 |
+| Soil Top Offset | 深色土层顶部相对地面的偏移约 `-0.4111`，与过渡层底部相接 |
+| Top Source Rect | 新图有效区域：横向 713～5707 像素、底部 685 像素，保留原始 PNG |
+
+地面根物体的 X 控制中心位置，保持 Scale 为 `1`；高度使用 Surface Y 调整，避免单独移动碰撞体。
+
+森林背景使用 `Assets/UI/Background/前景.png`、`中景.png`、`远景.png` 三张新素材，原始尺寸均为 `6145 × 1620`。前景和中景保留 PNG 透明区域，三层整图叠加，三层使用相同起点叠加对齐。各层 `Source Rect = (0, 0, 1, 1)`，当前试用 `Image Width = 0.8`，横向缩小 20% 以减小树间距；上下高度保持不变。将三层 `Image Width` 同时改回 `1` 可恢复原图比例。树层均在角色后面，地表植物仍在角色前面。
+
+`ParallaxBackground` 保留左右 A / B / C 三组（共 9 个启用的前／中／远图层），跨过一组时将离开的组回收到另一侧。横向镜像采样保持连接连续，不添加上下副本。跳跃不改变背景世界高度和垂直纹理位置，也不延展边缘颜色。三层与地面使用相同的绘制平面 Z `0.1`，避免透视相机在树根与地面之间产生接缝。换到该平面时同步调整世界尺寸，保持树木在画面中的原有大小；当前世界高度约 `20.7263`，中心 `World Center Y ≈ 10.28315`。树根与地面接合处保留 `0.08` 世界单位的重叠（当前游戏画面约 3～4 像素），背景原图下边缘为 `Y = -0.08`，略藏入地面以消除细缝；上边缘约为 `Y = 20.6463`，`Bottom Y = -0.08`，未启用的 `UndergroundBackground` 预留后续地下背景。
+
+背景速度在各层 `Scroll Strength` 调整，当前远／中／近为 `0.12 / 0.4 / 0.8`，移动时分别产生不同程度的视差。`World Center Y` 控制整套背景上下位置，各层 `Reference View Height × Image Height` 控制固定世界高度（当前均约为 `13.15956 × 1.575`）；源图像素高度不会自动决定世界尺寸。更换同尺寸配套素材时，应保持三层尺寸、中心、源区域和初始横向偏移一致。`Tools > Game > Create Parallax Background` 下的搭建工具默认使用原图比例（`Image Width = 1`）；当前场景及背景 Prefab 已保存间距试调值 `0.8`。
+
+已验证三层实际横向 UV 移动速度、A / B / C 回收、间距试调后的横向拼接，以及真实二段跳期间的固定高度与背景覆盖。新地面另验证了树根与地面、过渡层与土层接缝，以及地面碰撞和草片间距保持不变，12 项检查通过。
+
+草片间距采用世界坐标计算，保持图片大小与横向位置稳定；移动或跳跃不会使草片跟随相机漂移。已验证 `1 / 3 / 6` 三种间距的实际渲染、自然轮廓和完整草片显示，15 项检查通过。
+
+运行验证覆盖真实按键移动、跳跃及落地、连续地面碰撞、草地与树层遮挡顺序、左右回收、多种屏幕比例和跳跃时纹理稳定；Console 无错误、无警告。
+
 ### 版本维护
 
 - 游戏版本统一在 `Project Settings > Player > Version` 更新，并同步修改本 README 的版本信息。
@@ -311,4 +367,4 @@ ProjectSettings/                       # Unity 版本、输入、图层、构建
 - 正式发布时可创建与游戏版本一致的 Git Tag，例如 `v0.1.0`；创建前完成对应平台运行与构建验证。
 - 每次新增功能或改变调参入口时，同步更新实现状态、参数当前值和限制说明。
 
-当前 `0.1.0` 快照包含玩家移动 / 跳跃状态机、攻击与生命值框架、敌人 AI、相机跟随、Tilemap 测试地图和运行时调试面板；动画攻击、完整死亡复活、关卡事件布置与存档仍待完善。
+当前 `0.1.0` 快照包含玩家移动 / 跳跃状态机、攻击与生命值框架、敌人 AI、相机跟随、连续森林地面、横向循环背景和运行时调试面板；动画攻击、完整死亡复活、关卡事件布置与存档仍待完善。

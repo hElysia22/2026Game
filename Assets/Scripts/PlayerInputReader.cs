@@ -13,6 +13,7 @@ public class PlayerInputReader : MonoBehaviour
     private bool attackPressed;
     private bool pausePressed;
     private bool equipmentPressed;
+    public bool IsGameplayInputBlocked { get; private set; }
 
     void Awake()
     {
@@ -21,6 +22,8 @@ public class PlayerInputReader : MonoBehaviour
 
     void OnEnable()
     {
+        // 域重载（Play 中改脚本 / 重新编译）会清空非序列化字段，这里兜底重建，避免输入整体失效。
+        if (controls == null) controls = new PlayerControls();
         controls.Player.Enable();
 
         controls.Player.Jump.performed += OnJump;
@@ -31,6 +34,8 @@ public class PlayerInputReader : MonoBehaviour
 
     void OnDisable()
     {
+        if (controls == null) return;
+
         controls.Player.Jump.performed -= OnJump;
         controls.Player.Attack.performed -= OnAttack;
         controls.Player.Pause.performed -= OnPause;
@@ -42,6 +47,15 @@ public class PlayerInputReader : MonoBehaviour
 
     void Update()
     {
+        if (controls == null) return;
+
+        if (IsGameplayInputBlocked)
+        {
+            MoveInput = 0;
+            MoveVertical = 0;
+            JumpHeld = false;
+            return;
+        }
         Vector2 move = controls.Player.Move.ReadValue<Vector2>();
         MoveInput = move.x;
         MoveVertical = move.y;
@@ -50,11 +64,13 @@ public class PlayerInputReader : MonoBehaviour
 
     void OnJump(InputAction.CallbackContext ctx)
     {
+        if (IsGameplayInputBlocked) return;
         Debug.Log("Jump performed");
         jumpPressed = true;
     }
     void OnAttack(InputAction.CallbackContext ctx)
     {
+        if (IsGameplayInputBlocked) return;
         Debug.Log("Attack");
         attackPressed = true; 
     }
@@ -67,6 +83,16 @@ public class PlayerInputReader : MonoBehaviour
     void OnEquipment(InputAction.CallbackContext ctx)
     {
         equipmentPressed = true;
+    }
+
+    public void SetGameplayInputBlocked(bool blocked)
+    {
+        IsGameplayInputBlocked = blocked;
+        jumpPressed = false;
+        attackPressed = false;
+        MoveInput = 0;
+        MoveVertical = 0;
+        JumpHeld = false;
     }
 
     public bool ConsumeEquipment() { bool v = equipmentPressed; equipmentPressed = false; return v; }

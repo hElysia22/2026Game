@@ -52,5 +52,6 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 8
   hitVfx: {fileID: 0}
-  hitSfx: {fileID: 0}
+  hitSfx: {fileID: 8300000, guid: 5315d623011adcb469d199a39be5b207, type: 3}
+  hitStopTime: 0.03
   owner: {fileID: 0}

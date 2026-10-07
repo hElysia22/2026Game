@@ -34,6 +34,8 @@ public class EnemyData : ScriptableObject
     public float attackRecovery = 0.3f;
     public int attackDamage = 1;
     public float knockback = 3f;
+    [Min(0), Tooltip("攻击有效命中的顿帧秒数，0 关闭。")]
+    public float hitStopTime = 0.03f;
 
     [Header("Hurt")]
     public float hurtDuration = 0.2f;

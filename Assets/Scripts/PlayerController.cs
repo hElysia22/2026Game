@@ -52,6 +52,7 @@ public class PlayerController : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         health = GetComponent<Health>();
+        health.ResetHealth(data.maxHP);
         equipment = GetComponent<PlayerEquipment>();
         rb.gravityScale = data.gravityScale;
     }
@@ -70,6 +71,14 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        if (input != null && input.IsGameplayInputBlocked)
+        {
+            moveInput = 0;
+            jumpBufferTimer = 0;
+            attackPressed = false;
+            UpdateAnimator();
+            return;
+        }
         ReadInput();
         CheckLadder();
 
@@ -96,6 +105,7 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (input != null && input.IsGameplayInputBlocked) return;
         switch (CurrentState)
         {
             case PlayerState.Idle: FixedIdle(); break;
@@ -184,7 +194,8 @@ public class PlayerController : MonoBehaviour
                 attackCombo?.Begin();
                 break;
             case PlayerState.Hurt:
-                hurtTimer = 0.2f;
+                // 受击要“倒下 + 起身”整段播完：取配置时长与动画长度的较大者。
+                hurtTimer = Mathf.Max(data.hurtDuration, ClipLength("Char_Hurt"));
                 break;
             case PlayerState.Climb:
                 rb.gravityScale = 0f;
@@ -368,6 +379,7 @@ public class PlayerController : MonoBehaviour
         }
 
         bool groundJump = !groundJumpConsumed && (coyoteTimer > 0 || IsGrounded);
+        // 空中跳（二段跳）是围巾槽斗篷灵的能力：没装备就不能空中跳（沿用 PlayerEquipment.HasAirJump）。
         if (!groundJump && (equipment == null || !equipment.HasAirJump || airJumpUsed)) return false;
 
         if (groundJump) groundJumpConsumed = true;
@@ -377,10 +389,19 @@ public class PlayerController : MonoBehaviour
         jumpCutApplied = false;
         IsGrounded = false;
 
-        float force = data.jumpForce * (groundJump ? 1f : equipment.AirJumpForceMultiplier);
+        float force = data.jumpForce * (groundJump ? 1f : (equipment != null ? equipment.AirJumpForceMultiplier : 1f));
         rb.velocity = new Vector2(rb.velocity.x, force);
+        // 空中再按跳时重播起跳动画，否则会停在上一段动作的末帧。
+        if (!groundJump && CurrentState == PlayerState.Jump) PlayJumpAnimationFromStart();
         ChangeState(PlayerState.Jump);
         return true;
+    }
+
+    /// <summary>二段跳时重播起跳动画，避免停留在上一段动作的末帧。</summary>
+    void PlayJumpAnimationFromStart()
+    {
+        if (animator == null) return;
+        animator.Play("Jump", 0, 0f);
     }
 
     void JumpOffLadder()
@@ -444,6 +465,17 @@ public class PlayerController : MonoBehaviour
         transform.localScale = new Vector3(dir, 1, 1);
     }
 
+    /// <summary>取 Animator 上某个剪辑的长度（找不到返回 0）。</summary>
+    float ClipLength(string clipName)
+    {
+        if (animator == null) return 0f;
+        var controller = animator.runtimeAnimatorController;
+        if (controller == null) return 0f;
+        foreach (var clip in controller.animationClips)
+            if (clip != null && clip.name == clipName) return clip.length;
+        return 0f;
+    }
+
     void UpdateAnimator()
     {
         if (animator == null) return;
@@ -457,9 +489,32 @@ public class PlayerController : MonoBehaviour
     // 事件
     // ------------------------------------------------------------
 
+    /// <summary>掉落返回安全点，清理攻击和跳跃缓存，保留生命与装备。</summary>
+    public void ResetAfterFall(Vector3 safePosition)
+    {
+        if (attackCombo != null) attackCombo.ForceCancel();
+        rb.position = safePosition;
+        transform.position = safePosition;
+        rb.velocity = Vector2.zero;
+        rb.gravityScale = data.gravityScale;
+        currentLadder = null;
+        nearLadder = false;
+        groundJumpConsumed = false;
+        airJumpUsed = false;
+        jumpCutApplied = false;
+        moveInput = 0;
+        jumpPressed = attackPressed = false;
+        coyoteTimer = jumpBufferTimer = hurtTimer = 0;
+        IsGrounded = false;
+        CurrentState = PlayerState.Idle;
+        Physics2D.SyncTransforms();
+    }
+
     void HandleDamaged()
     {
         if (CurrentState == PlayerState.Dead) return;
+        // 每次受击都给一段无敌时间，避免连续判定瞬间清空血量。
+        health.ApplyInvincibility(data.invincibleTime);
         ChangeState(PlayerState.Hurt);
     }
 

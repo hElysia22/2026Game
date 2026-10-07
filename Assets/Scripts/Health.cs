@@ -14,7 +14,17 @@ public class Health : MonoBehaviour
 
     private float invincibleTimer;
 
-    void Awake() => CurrentHP = maxHP;
+    void Awake() => ResetHealth(maxHP);
+
+    /// <summary>出生/重生时恢复生命；角色数据中的 maxHP 是玩家生命上限的来源。</summary>
+    public void ResetHealth(int maximum)
+    {
+        maxHP = Mathf.Max(1, maximum);
+        CurrentHP = maxHP;
+        IsInvincible = false;
+        invincibleTimer = 0;
+        OnHPChanged?.Invoke(CurrentHP, maxHP);
+    }
 
     void Update()
     {
@@ -25,9 +35,9 @@ public class Health : MonoBehaviour
         }
     }
 
-    public bool TryTakeDamage(int amount, float invincibleTime, Vector2 knockback)
+    public bool TryTakeDamage(int amount, float invincibleTime, Vector2 knockback, bool ignoreInvincibility = false)
     {
-        if (IsDead || IsInvincible || amount <= 0) return false;
+        if (IsDead || (IsInvincible && !ignoreInvincibility) || amount <= 0) return false;
         var equipment = GetComponent<PlayerEquipment>();
         if (equipment != null) amount = Mathf.Max(1, amount - equipment.DamageReduction);
 
@@ -53,5 +63,13 @@ public class Health : MonoBehaviour
     {
         CurrentHP = Mathf.Min(maxHP, CurrentHP + amount);
         OnHPChanged?.Invoke(CurrentHP, maxHP);
+    }
+
+    /// <summary>受伤后强制一段无敌时间（玩家用 CharacterData.invincibleTime）。</summary>
+    public void ApplyInvincibility(float seconds)
+    {
+        if (seconds <= 0f) return;
+        IsInvincible = true;
+        invincibleTimer = Mathf.Max(invincibleTimer, seconds);
     }
 }

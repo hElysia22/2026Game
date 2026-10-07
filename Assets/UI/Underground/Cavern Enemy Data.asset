@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 381c20687f26f4f49acb8d7a426e6000, type: 3}
+  m_Name: Cavern Enemy Data
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyData
+  maxHP: 3
+  moveSpeed: 3
+  patrolDistance: 1.4
+  detectRange: 6
+  detectAngle: 90
+  ignoreY: 0
+  alertMoveSpeed: 1
+  alertDistance: 1.8
+  alertDistanceTolerance: 0.2
+  loseTargetRange: 8
+  loseTargetDelay: 1
+  attackRange: 1.2
+  attackCooldown: 1.5
+  attackWindup: 0.3
+  attackRecovery: 0.3
+  attackDamage: 1
+  knockback: 3
+  hitStopTime: 0.03
+  hurtDuration: 0.2
